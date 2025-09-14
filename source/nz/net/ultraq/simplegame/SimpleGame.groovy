@@ -21,10 +21,12 @@ import nz.net.ultraq.redhorizon.graphics.Shader
 import nz.net.ultraq.redhorizon.graphics.Window
 import nz.net.ultraq.redhorizon.graphics.opengl.BasicShader
 import nz.net.ultraq.redhorizon.graphics.opengl.OpenGLWindow
+import nz.net.ultraq.redhorizon.input.KeyEvent
 
 import org.joml.Matrix4f
 import picocli.CommandLine
 import picocli.CommandLine.Command
+import static org.lwjgl.glfw.GLFW.*
 
 /**
  * Entry point to the simple game example.
@@ -43,7 +45,7 @@ class SimpleGame implements Runnable {
 	}
 
 	private Window window
-	private Image backkgroundImage
+	private Image backgroundImage
 	private Image bucketImage
 	private Image dropImage
 	private Shader shader
@@ -54,8 +56,13 @@ class SimpleGame implements Runnable {
 		try {
 			window = new OpenGLWindow(800, 500, 'libGDX Simple Game')
 				.withVSync(true)
+				.on(KeyEvent) { event ->
+					if (event.keyPressed(GLFW_KEY_ESCAPE)) {
+						window.shouldClose(true)
+					}
+				}
 			shader = new BasicShader()
-			backkgroundImage = new Image('background.png', getResourceAsStream('nz/net/ultraq/simplegame/background.png'))
+			backgroundImage = new Image('background.png', getResourceAsStream('nz/net/ultraq/simplegame/background.png'))
 			bucketImage = new Image('bucket.png', getResourceAsStream('nz/net/ultraq/simplegame/bucket.png'))
 			dropImage = new Image('drop.png', getResourceAsStream('nz/net/ultraq/simplegame/drop.png'))
 
@@ -72,6 +79,7 @@ class SimpleGame implements Runnable {
 					shader.use()
 					shader.setUniform('projection', projection)
 					shader.setUniform('view', view)
+					backgroundImage.draw(shader)
 					bucketImage.draw(shader)
 				}
 				Thread.yield()
@@ -80,7 +88,7 @@ class SimpleGame implements Runnable {
 		finally {
 			dropImage?.close()
 			bucketImage?.close()
-			backkgroundImage?.close()
+			backgroundImage?.close()
 			window?.close()
 		}
 	}
