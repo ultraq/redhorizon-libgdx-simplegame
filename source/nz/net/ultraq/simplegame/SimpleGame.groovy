@@ -21,9 +21,15 @@ import nz.net.ultraq.redhorizon.graphics.Shader
 import nz.net.ultraq.redhorizon.graphics.Window
 import nz.net.ultraq.redhorizon.graphics.opengl.BasicShader
 import nz.net.ultraq.redhorizon.graphics.opengl.OpenGLWindow
+import nz.net.ultraq.redhorizon.input.CursorPositionEvent
+import nz.net.ultraq.redhorizon.input.InputEvent
 import nz.net.ultraq.redhorizon.input.KeyEvent
+import nz.net.ultraq.redhorizon.input.MouseButtonEvent
 
 import org.joml.Matrix4f
+import org.joml.Vector3f
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import static org.lwjgl.glfw.GLFW.*
@@ -46,6 +52,13 @@ class SimpleGame implements Runnable {
 		System.exit(new CommandLine(new SimpleGame()).execute(args))
 	}
 
+	private static final Logger logger = LoggerFactory.getLogger(SimpleGame)
+	private static final Matrix4f projection = new Matrix4f().setOrthoSymmetric(800, 500, 0, 1)
+	private static final Matrix4f view = new Matrix4f().setLookAt(
+		400, 250, 1,
+		400, 250, 0,
+		0, 1, 0
+	)
 	private static final float BUCKET_SPEED = 4f
 
 	private Window window
@@ -54,9 +67,13 @@ class SimpleGame implements Runnable {
 	private Image dropImage
 	private Shader shader
 
-	private final Queue<KeyEvent> keyEvents = new LinkedBlockingQueue<>()
+	private final Queue<InputEvent> inputEventsQueue = new LinkedBlockingQueue<>()
+	private final List<InputEvent> inputEvents = new ArrayList<>()
 	private boolean movingLeft
 	private boolean movingRight
+	private Vector3f screenCursorPosition = new Vector3f()
+	private Vector3f bucketPosition = new Vector3f()
+	private Vector3f bucketScale = new Vector3f()
 
 	@Override
 	void run() {
@@ -66,25 +83,19 @@ class SimpleGame implements Runnable {
 		try {
 			window = new OpenGLWindow(800, 500, 'libGDX Simple Game')
 				.withVSync(true)
-				.on(KeyEvent) { event ->
-					if (event.keyPressed(GLFW_KEY_ESCAPE)) {
+				.on(InputEvent) { event ->
+					if (event instanceof KeyEvent && event.keyPressed(GLFW_KEY_ESCAPE)) {
 						window.shouldClose(true)
 					}
 					else {
-						keyEvents << event
+						inputEventsQueue << event
 					}
 				}
 			shader = new BasicShader()
 			backgroundImage = new Image('background.png', getResourceAsStream('nz/net/ultraq/simplegame/background.png'))
 			bucketImage = new Image('bucket.png', getResourceAsStream('nz/net/ultraq/simplegame/bucket.png'))
+			bucketImage.transform.getScale(bucketScale)
 			dropImage = new Image('drop.png', getResourceAsStream('nz/net/ultraq/simplegame/drop.png'))
-
-			var projection = new Matrix4f().setOrthoSymmetric(800, 500, 0, 1)
-			var view = new Matrix4f().setLookAt(
-				400, 250, 1,
-				400, 250, 0,
-				0, 1, 0
-			)
 
 			window.show()
 
@@ -119,26 +130,50 @@ class SimpleGame implements Runnable {
 	 */
 	private void input(float delta) {
 
-		keyEvents.drain().each { event ->
-			if (event.keyPressed(GLFW_KEY_LEFT)) {
-				movingLeft = true
+		var moveToCursor = false
+
+		inputEventsQueue.drainTo(inputEvents)
+		inputEvents.each { event ->
+			if (event instanceof KeyEvent) {
+				if (event.keyPressed(GLFW_KEY_LEFT)) {
+					movingLeft = true
+				}
+				else if (event.keyReleased(GLFW_KEY_LEFT)) {
+					movingLeft = false
+				}
+				else if (event.keyPressed(GLFW_KEY_RIGHT)) {
+					movingRight = true
+				}
+				else if (event.keyReleased(GLFW_KEY_RIGHT)) {
+					movingRight = false
+				}
 			}
-			else if (event.keyReleased(GLFW_KEY_LEFT)) {
-				movingLeft = false
+			else if (event instanceof CursorPositionEvent) {
+				screenCursorPosition.set(event.xPos, event.yPos, 0)
 			}
-			else if (event.keyPressed(GLFW_KEY_RIGHT)) {
-				movingRight = true
-			}
-			else if (event.keyReleased(GLFW_KEY_RIGHT)) {
-				movingRight = false
+			else if (event instanceof MouseButtonEvent) {
+				if (event.buttonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+					moveToCursor = true
+				}
 			}
 		}
+		inputEvents.clear()
 
 		if (movingLeft) {
 			bucketImage.transform.translate((float)(-BUCKET_SPEED * delta), 0, 0)
+			bucketImage.transform.getTranslation(bucketPosition)
+			logger.debug('Bucket position: {}', bucketPosition.x)
 		}
 		else if (movingRight) {
 			bucketImage.transform.translate((float)(BUCKET_SPEED * delta), 0, 0)
+			bucketImage.transform.getTranslation(bucketPosition)
+			logger.debug('Bucket position: {}', bucketPosition.x)
+		}
+
+		if (moveToCursor) {
+			bucketImage.transform.translate((float)((screenCursorPosition.x - bucketPosition.x - 50f) / bucketScale.x), 0, 0)
+			bucketImage.transform.getTranslation(bucketPosition)
+			logger.debug('Bucket position: {}', bucketPosition.x)
 		}
 	}
 }
