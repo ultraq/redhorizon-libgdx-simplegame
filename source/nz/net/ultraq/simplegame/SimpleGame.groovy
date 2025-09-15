@@ -28,6 +28,8 @@ import picocli.CommandLine
 import picocli.CommandLine.Command
 import static org.lwjgl.glfw.GLFW.*
 
+import java.util.concurrent.LinkedBlockingQueue
+
 /**
  * Entry point to the simple game example.
  *
@@ -44,14 +46,22 @@ class SimpleGame implements Runnable {
 		System.exit(new CommandLine(new SimpleGame()).execute(args))
 	}
 
+	private static final float BUCKET_SPEED = 4f
+
 	private Window window
 	private Image backgroundImage
 	private Image bucketImage
 	private Image dropImage
 	private Shader shader
 
+	private final Queue<KeyEvent> keyEvents = new LinkedBlockingQueue<>()
+	private boolean movingLeft
+	private boolean movingRight
+
 	@Override
 	void run() {
+
+		var lastUpdateTimeMs = 0l
 
 		try {
 			window = new OpenGLWindow(800, 500, 'libGDX Simple Game')
@@ -59,6 +69,9 @@ class SimpleGame implements Runnable {
 				.on(KeyEvent) { event ->
 					if (event.keyPressed(GLFW_KEY_ESCAPE)) {
 						window.shouldClose(true)
+					}
+					else {
+						keyEvents << event
 					}
 				}
 			shader = new BasicShader()
@@ -74,7 +87,13 @@ class SimpleGame implements Runnable {
 			)
 
 			window.show()
+
 			while (!window.shouldClose()) {
+				var currentTimeMs = System.currentTimeMillis()
+				var delta = (currentTimeMs - (lastUpdateTimeMs ?: currentTimeMs)) / 1000
+
+				input(delta)
+
 				window.withFrame { ->
 					shader.use()
 					shader.setUniform('projection', projection)
@@ -82,6 +101,8 @@ class SimpleGame implements Runnable {
 					backgroundImage.draw(shader)
 					bucketImage.draw(shader)
 				}
+
+				lastUpdateTimeMs = currentTimeMs
 				Thread.yield()
 			}
 		}
@@ -90,6 +111,34 @@ class SimpleGame implements Runnable {
 			bucketImage?.close()
 			backgroundImage?.close()
 			window?.close()
+		}
+	}
+
+	/**
+	 * Process input events.
+	 */
+	private void input(float delta) {
+
+		keyEvents.drain().each { event ->
+			if (event.keyPressed(GLFW_KEY_LEFT)) {
+				movingLeft = true
+			}
+			else if (event.keyReleased(GLFW_KEY_LEFT)) {
+				movingLeft = false
+			}
+			else if (event.keyPressed(GLFW_KEY_RIGHT)) {
+				movingRight = true
+			}
+			else if (event.keyReleased(GLFW_KEY_RIGHT)) {
+				movingRight = false
+			}
+		}
+
+		if (movingLeft) {
+			bucketImage.transform.translate((float)(-BUCKET_SPEED * delta), 0, 0)
+		}
+		else if (movingRight) {
+			bucketImage.transform.translate((float)(BUCKET_SPEED * delta), 0, 0)
 		}
 	}
 }
