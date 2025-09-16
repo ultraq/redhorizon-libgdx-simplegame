@@ -53,33 +53,36 @@ class SimpleGame implements Runnable {
 	}
 
 	private static final Logger logger = LoggerFactory.getLogger(SimpleGame)
-	private static final Matrix4f projection = new Matrix4f().setOrthoSymmetric(800, 500, 0, 1)
+	private static final float worldWidth = 800f
+	private static final float worldHeight = 500f
+	private static final Matrix4f projection = new Matrix4f().setOrthoSymmetric(worldWidth, worldHeight, 0, 1)
 	private static final Matrix4f view = new Matrix4f().setLookAt(
-		400, 250, 1,
-		400, 250, 0,
+		(float)(worldWidth / 2), (float)(worldHeight / 2), 1,
+		(float)(worldWidth / 2), (float)(worldHeight / 2), 0,
 		0, 1, 0
 	)
 	private static final float BUCKET_SPEED = 400f
+	private static final float DROP_SPEED = 200f
 
 	private Window window
 	private Image backgroundImage
 	private Image bucketImage
-	private Image dropImage
 	private Shader shader
+	private final List<Image> drops = []
 
 	private final Queue<InputEvent> inputEventsQueue = new LinkedBlockingQueue<>()
-	private final List<InputEvent> inputEvents = new ArrayList<>()
+	private final List<InputEvent> inputEvents = []
 	private boolean movingLeft
 	private boolean movingRight
 	private boolean moveToCursor
 	private Vector3f screenCursorPosition = new Vector3f()
 	private Vector3f bucketPosition = new Vector3f()
 	private Vector3f lastBucketPosition = new Vector3f()
+	private float dropTimer
+	private Vector3f dropPosition = new Vector3f()
 
 	@Override
 	void run() {
-
-		var lastUpdateTimeMs = 0l
 
 		try {
 			window = new OpenGLWindow(800, 500, 'libGDX Simple Game')
@@ -95,33 +98,29 @@ class SimpleGame implements Runnable {
 			shader = new BasicShader()
 			backgroundImage = new Image('background.png', getResourceAsStream('nz/net/ultraq/simplegame/background.png'))
 			bucketImage = new Image('bucket.png', getResourceAsStream('nz/net/ultraq/simplegame/bucket.png'))
-			dropImage = new Image('drop.png', getResourceAsStream('nz/net/ultraq/simplegame/drop.png'))
 
 			window.show()
+			var lastUpdateTimeMs = System.currentTimeMillis()
 
 			while (!window.shouldClose()) {
 				var currentTimeMs = System.currentTimeMillis()
-				var delta = (currentTimeMs - (lastUpdateTimeMs ?: currentTimeMs)) / 1000
+				var delta = (currentTimeMs - lastUpdateTimeMs) / 1000 as float
 
 				input(delta)
-
-				window.withFrame { ->
-					shader.use()
-					shader.setUniform('projection', projection)
-					shader.setUniform('view', view)
-					backgroundImage.draw(shader)
-					bucketImage.draw(shader)
-				}
+				logic(delta)
+				render()
 
 				lastUpdateTimeMs = currentTimeMs
 				Thread.yield()
 			}
 		}
 		finally {
-			dropImage?.close()
+			drops*.close()
 			bucketImage?.close()
 			backgroundImage?.close()
+			shader?.close()
 			window?.close()
+			Thread.sleep(3000) // Just so we get some stats at the end
 		}
 	}
 
@@ -130,6 +129,8 @@ class SimpleGame implements Runnable {
 	 */
 	private void input(float delta) {
 
+		// TODO: Handle input press/release in some sort of system that can be
+		//       easily queried, https://github.com/ultraq/redhorizon/issues/56#issuecomment-3289393917
 		inputEventsQueue.drainTo(inputEvents)
 		inputEvents.each { event ->
 			if (event instanceof KeyEvent) {
@@ -167,22 +168,68 @@ class SimpleGame implements Runnable {
 			bucketImage.transform.translate((float)(BUCKET_SPEED * delta), 0, 0)
 		}
 		if (moveToCursor) {
-			bucketImage.transform.translate((float)(screenCursorPosition.x - bucketPosition.x - 50f), 0, 0)
+			bucketImage.transform.translate((float)(screenCursorPosition.x - bucketPosition.x - (bucketImage.width / 2)), 0, 0)
 		}
+	}
 
+	/**
+	 * Perform the game logic.
+	 */
+	private void logic(float delta) {
+
+		// Clamp the bucket to the screen
 		bucketImage.transform.getTranslation(bucketPosition)
 		if (bucketPosition.x < 0) {
 			bucketImage.transform.translation(0, 0, 0)
 			bucketImage.transform.getTranslation(bucketPosition)
 		}
-		else if (bucketPosition.x > 700) {
-			bucketImage.transform.translation(700, 0, 0)
+		else if (bucketPosition.x > worldWidth - bucketImage.width) {
+			bucketImage.transform.translation((float)(worldWidth - bucketImage.width), 0, 0)
 			bucketImage.transform.getTranslation(bucketPosition)
 		}
 
 		if (bucketPosition != lastBucketPosition) {
-			logger.info('Bucket position: {}', bucketPosition.x)
+			logger.debug('Bucket position: {}', bucketPosition.x)
 			lastBucketPosition.set(bucketPosition)
+		}
+
+		// Create a new drop every 1 second
+		dropTimer += delta
+		if (dropTimer > 1) {
+			var drop = new Image('drop.png', getResourceAsStream('nz/net/ultraq/simplegame/drop.png'))
+			drop.transform.translation((float)(Math.random() * (worldWidth - drop.width)), 500, 0)
+			drops << drop
+			dropTimer -= 1
+		}
+
+		// Move drops down the screen
+		drops.each { drop ->
+			drop.transform.translate(0, (float)(-DROP_SPEED * delta), 0)
+		}
+
+		// Check if the oldest drop (the head of the list given they're added in
+		// chronological order) is no longer visible and can be removed
+		if (drops) {
+			var oldestDrop = drops.first()
+			if (oldestDrop.transform.getTranslation(dropPosition).y < -oldestDrop.height) {
+				drops.remove(oldestDrop)
+				oldestDrop.close()
+			}
+		}
+	}
+
+	/**
+	 * Draw the game objects to the screen.
+	 */
+	private void render() {
+
+		window.withFrame { ->
+			shader.use()
+			shader.setUniform('projection', projection)
+			shader.setUniform('view', view)
+			backgroundImage.draw(shader)
+			bucketImage.draw(shader)
+			drops*.draw(shader)
 		}
 	}
 }
