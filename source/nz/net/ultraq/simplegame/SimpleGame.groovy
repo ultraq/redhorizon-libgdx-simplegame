@@ -28,6 +28,7 @@ import nz.net.ultraq.redhorizon.input.MouseButtonEvent
 
 import org.joml.Matrix4f
 import org.joml.Vector3f
+import org.joml.primitives.Rectanglef
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
@@ -80,6 +81,8 @@ class SimpleGame implements Runnable {
 	private Vector3f lastBucketPosition = new Vector3f()
 	private float dropTimer
 	private Vector3f dropPosition = new Vector3f()
+	private Rectanglef bucketHitBox = new Rectanglef()
+	private Rectanglef dropHitBox = new Rectanglef()
 
 	@Override
 	void run() {
@@ -120,7 +123,6 @@ class SimpleGame implements Runnable {
 			backgroundImage?.close()
 			shader?.close()
 			window?.close()
-			Thread.sleep(3000) // Just so we get some stats at the end
 		}
 	}
 
@@ -192,28 +194,39 @@ class SimpleGame implements Runnable {
 			logger.debug('Bucket position: {}', bucketPosition.x)
 			lastBucketPosition.set(bucketPosition)
 		}
+		bucketHitBox.set(bucketPosition.x, bucketPosition.y, (float)(bucketPosition.x + bucketImage.width), (float)(bucketPosition.y + bucketImage.height))
 
 		// Create a new drop every 1 second
 		dropTimer += delta
 		if (dropTimer > 1) {
+			// TODO: Some object that can reuse an existing image, instead of having
+			//       to load a new one every time: https://github.com/ultraq/redhorizon/issues/56#issuecomment-3289393917
 			var drop = new Image('drop.png', getResourceAsStream('nz/net/ultraq/simplegame/drop.png'))
 			drop.transform.translation((float)(Math.random() * (worldWidth - drop.width)), 500, 0)
 			drops << drop
 			dropTimer -= 1
 		}
 
-		// Move drops down the screen
-		drops.each { drop ->
-			drop.transform.translate(0, (float)(-DROP_SPEED * delta), 0)
-		}
+		for (var iterator = drops.listIterator(); iterator.hasNext(); ) {
+			var drop = iterator.next()
 
-		// Check if the oldest drop (the head of the list given they're added in
-		// chronological order) is no longer visible and can be removed
-		if (drops) {
-			var oldestDrop = drops.first()
-			if (oldestDrop.transform.getTranslation(dropPosition).y < -oldestDrop.height) {
-				drops.remove(oldestDrop)
-				oldestDrop.close()
+			// Move drops down the screen
+			drop.transform.translate(0, (float)(-DROP_SPEED * delta), 0)
+			drop.transform.getTranslation(dropPosition)
+			dropHitBox.set(dropPosition.x, dropPosition.y, (float)(dropPosition.x + drop.width), (float)(dropPosition.y + drop.height))
+
+			// Check if this drop has been collected by the bucket
+			if (bucketHitBox.intersectsRectangle(dropHitBox)) {
+				logger.info('Drop collected!')
+				iterator.remove()
+				drop.close()
+			}
+
+			// Check if the drop is no longer visible
+			else if (drop.transform.getTranslation(dropPosition).y < -drop.height) {
+				logger.info('Drop no longer visible')
+				iterator.remove()
+				drop.close()
 			}
 		}
 	}
