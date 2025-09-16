@@ -16,6 +16,9 @@
 
 package nz.net.ultraq.simplegame
 
+import nz.net.ultraq.redhorizon.audio.AudioDevice
+import nz.net.ultraq.redhorizon.audio.Sound
+import nz.net.ultraq.redhorizon.audio.openal.OpenALAudioDevice
 import nz.net.ultraq.redhorizon.graphics.Image
 import nz.net.ultraq.redhorizon.graphics.Shader
 import nz.net.ultraq.redhorizon.graphics.Window
@@ -46,7 +49,7 @@ import java.util.concurrent.LinkedBlockingQueue
 class SimpleGame implements Runnable {
 
 	static {
-		System.setProperty('org.lwjgl.system.stackSize', '10240')
+		System.setProperty('org.lwjgl.system.stackSize', '20480')
 	}
 
 	static void main(String[] args) {
@@ -70,6 +73,10 @@ class SimpleGame implements Runnable {
 	private Image bucketImage
 	private Shader shader
 	private final List<Image> drops = []
+	private AudioDevice device
+	// TODO: A proper streaming music type: https://github.com/ultraq/redhorizon/issues/56#issuecomment-3289393917
+	private Sound music
+	private Sound dropSound
 
 	private final Queue<InputEvent> inputEventsQueue = new LinkedBlockingQueue<>()
 	private final List<InputEvent> inputEvents = []
@@ -102,7 +109,13 @@ class SimpleGame implements Runnable {
 			backgroundImage = new Image('background.png', getResourceAsStream('nz/net/ultraq/simplegame/background.png'))
 			bucketImage = new Image('bucket.png', getResourceAsStream('nz/net/ultraq/simplegame/bucket.png'))
 
+			device = new OpenALAudioDevice()
+				.withMasterVolume(0.5)
+			music = new Sound('music.mp3', getResourceAsStream('nz/net/ultraq/simplegame/music.mp3'))
+			dropSound = new Sound('drop.mp3', getResourceAsStream('nz/net/ultraq/simplegame/drop.mp3'))
+
 			window.show()
+			music.play()
 			var lastUpdateTimeMs = System.currentTimeMillis()
 
 			while (!window.shouldClose()) {
@@ -118,6 +131,9 @@ class SimpleGame implements Runnable {
 			}
 		}
 		finally {
+			dropSound?.close()
+			music?.close()
+			device?.close()
 			drops*.close()
 			bucketImage?.close()
 			backgroundImage?.close()
@@ -218,6 +234,7 @@ class SimpleGame implements Runnable {
 			// Check if this drop has been collected by the bucket
 			if (bucketHitBox.intersectsRectangle(dropHitBox)) {
 				logger.info('Drop collected!')
+				dropSound.play()
 				iterator.remove()
 				drop.close()
 			}
