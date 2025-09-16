@@ -59,7 +59,7 @@ class SimpleGame implements Runnable {
 		400, 250, 0,
 		0, 1, 0
 	)
-	private static final float BUCKET_SPEED = 4f
+	private static final float BUCKET_SPEED = 400f
 
 	private Window window
 	private Image backgroundImage
@@ -71,9 +71,10 @@ class SimpleGame implements Runnable {
 	private final List<InputEvent> inputEvents = new ArrayList<>()
 	private boolean movingLeft
 	private boolean movingRight
+	private boolean moveToCursor
 	private Vector3f screenCursorPosition = new Vector3f()
 	private Vector3f bucketPosition = new Vector3f()
-	private Vector3f bucketScale = new Vector3f()
+	private Vector3f lastBucketPosition = new Vector3f()
 
 	@Override
 	void run() {
@@ -94,7 +95,6 @@ class SimpleGame implements Runnable {
 			shader = new BasicShader()
 			backgroundImage = new Image('background.png', getResourceAsStream('nz/net/ultraq/simplegame/background.png'))
 			bucketImage = new Image('bucket.png', getResourceAsStream('nz/net/ultraq/simplegame/bucket.png'))
-			bucketImage.transform.getScale(bucketScale)
 			dropImage = new Image('drop.png', getResourceAsStream('nz/net/ultraq/simplegame/drop.png'))
 
 			window.show()
@@ -130,8 +130,6 @@ class SimpleGame implements Runnable {
 	 */
 	private void input(float delta) {
 
-		var moveToCursor = false
-
 		inputEventsQueue.drainTo(inputEvents)
 		inputEvents.each { event ->
 			if (event instanceof KeyEvent) {
@@ -155,25 +153,36 @@ class SimpleGame implements Runnable {
 				if (event.buttonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
 					moveToCursor = true
 				}
+				else if (event.buttonReleased(GLFW_MOUSE_BUTTON_LEFT)) {
+					moveToCursor = false
+				}
 			}
 		}
 		inputEvents.clear()
 
 		if (movingLeft) {
 			bucketImage.transform.translate((float)(-BUCKET_SPEED * delta), 0, 0)
-			bucketImage.transform.getTranslation(bucketPosition)
-			logger.debug('Bucket position: {}', bucketPosition.x)
 		}
-		else if (movingRight) {
+		if (movingRight) {
 			bucketImage.transform.translate((float)(BUCKET_SPEED * delta), 0, 0)
-			bucketImage.transform.getTranslation(bucketPosition)
-			logger.debug('Bucket position: {}', bucketPosition.x)
+		}
+		if (moveToCursor) {
+			bucketImage.transform.translate((float)(screenCursorPosition.x - bucketPosition.x - 50f), 0, 0)
 		}
 
-		if (moveToCursor) {
-			bucketImage.transform.translate((float)((screenCursorPosition.x - bucketPosition.x - 50f) / bucketScale.x), 0, 0)
+		bucketImage.transform.getTranslation(bucketPosition)
+		if (bucketPosition.x < 0) {
+			bucketImage.transform.translation(0, 0, 0)
 			bucketImage.transform.getTranslation(bucketPosition)
-			logger.debug('Bucket position: {}', bucketPosition.x)
+		}
+		else if (bucketPosition.x > 700) {
+			bucketImage.transform.translation(700, 0, 0)
+			bucketImage.transform.getTranslation(bucketPosition)
+		}
+
+		if (bucketPosition != lastBucketPosition) {
+			logger.info('Bucket position: {}', bucketPosition.x)
+			lastBucketPosition.set(bucketPosition)
 		}
 	}
 }
