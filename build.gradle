@@ -29,12 +29,17 @@ configure {
 				implementation 'ch.qos.logback:logback-classic:1.5.18'
 				implementation 'info.picocli:picocli:4.7.7'
 				implementation 'nz.net.ultraq.groovy:groovy-extensions:3.0.0-SNAPSHOT'
+				implementation 'nz.net.ultraq.groovy:joml-extensions:0.1.1'
 				implementation 'nz.net.ultraq.redhorizon:redhorizon-audio:0.40.0-SNAPSHOT'
 				implementation 'nz.net.ultraq.redhorizon:redhorizon-graphics:0.40.0-SNAPSHOT'
 				implementation 'nz.net.ultraq.redhorizon:redhorizon-input:0.40.0-SNAPSHOT'
 				implementation 'org.apache.groovy:groovy:4.0.28'
-				implementation 'org.joml:joml:1.10.8'
-				implementation 'org.joml:joml-primitives:1.10.0'
+				implementation('org.joml:joml:1.10.8') {
+					exclude group: 'org.jetbrains.kotlin'
+				}
+				implementation('org.joml:joml-primitives:1.10.0') {
+					exclude group: 'org.jetbrains.kotlin'
+				}
 			}
 }
 
