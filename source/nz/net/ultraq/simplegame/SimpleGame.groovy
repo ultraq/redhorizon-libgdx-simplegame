@@ -24,10 +24,9 @@ import nz.net.ultraq.redhorizon.graphics.Shader
 import nz.net.ultraq.redhorizon.graphics.Window
 import nz.net.ultraq.redhorizon.graphics.opengl.BasicShader
 import nz.net.ultraq.redhorizon.graphics.opengl.OpenGLWindow
-import nz.net.ultraq.redhorizon.input.CursorPositionEvent
 import nz.net.ultraq.redhorizon.input.InputEvent
+import nz.net.ultraq.redhorizon.input.InputEventHandler
 import nz.net.ultraq.redhorizon.input.KeyEvent
-import nz.net.ultraq.redhorizon.input.MouseButtonEvent
 
 import org.joml.Matrix4f
 import org.joml.Vector3f
@@ -37,8 +36,6 @@ import org.slf4j.LoggerFactory
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import static org.lwjgl.glfw.GLFW.*
-
-import java.util.concurrent.LinkedBlockingQueue
 
 /**
  * Entry point to the simple game example.
@@ -78,12 +75,7 @@ class SimpleGame implements Runnable {
 	private Sound music
 	private Sound dropSound
 
-	private final Queue<InputEvent> inputEventsQueue = new LinkedBlockingQueue<>()
-	private final List<InputEvent> inputEvents = []
-	private boolean movingLeft
-	private boolean movingRight
-	private boolean moveToCursor
-	private Vector3f screenCursorPosition = new Vector3f()
+	private InputEventHandler inputEventHandler
 	private Vector3f bucketPosition = new Vector3f()
 	private Vector3f lastBucketPosition = new Vector3f()
 	private float dropTimer
@@ -101,21 +93,22 @@ class SimpleGame implements Runnable {
 					if (event instanceof KeyEvent && event.keyPressed(GLFW_KEY_ESCAPE)) {
 						window.shouldClose(true)
 					}
-					else {
-						inputEventsQueue << event
-					}
 				}
+			inputEventHandler = new InputEventHandler()
+				.addInputSource(window)
 			shader = new BasicShader()
 			backgroundImage = new Image('background.png', getResourceAsStream('nz/net/ultraq/simplegame/background.png'))
 			bucketImage = new Image('bucket.png', getResourceAsStream('nz/net/ultraq/simplegame/bucket.png'))
 
 			device = new OpenALAudioDevice()
-				.withMasterVolume(0.5)
+				.withMasterVolume(0.4)
 			music = new Sound('music.mp3', getResourceAsStream('nz/net/ultraq/simplegame/music.mp3'))
 			dropSound = new Sound('drop.mp3', getResourceAsStream('nz/net/ultraq/simplegame/drop.mp3'))
 
 			window.show()
-			music.play()
+			music
+				.withVolume(0.5)
+				.play()
 			var lastUpdateTimeMs = System.currentTimeMillis()
 
 			while (!window.shouldClose()) {
@@ -147,46 +140,14 @@ class SimpleGame implements Runnable {
 	 */
 	private void input(float delta) {
 
-		// TODO: Handle input press/release in some sort of system that can be
-		//       easily queried, https://github.com/ultraq/redhorizon/issues/56#issuecomment-3289393917
-		inputEventsQueue.drainTo(inputEvents)
-		inputEvents.each { event ->
-			if (event instanceof KeyEvent) {
-				if (event.keyPressed(GLFW_KEY_LEFT)) {
-					movingLeft = true
-				}
-				else if (event.keyReleased(GLFW_KEY_LEFT)) {
-					movingLeft = false
-				}
-				else if (event.keyPressed(GLFW_KEY_RIGHT)) {
-					movingRight = true
-				}
-				else if (event.keyReleased(GLFW_KEY_RIGHT)) {
-					movingRight = false
-				}
-			}
-			else if (event instanceof CursorPositionEvent) {
-				screenCursorPosition.set(event.xPos, event.yPos, 0)
-			}
-			else if (event instanceof MouseButtonEvent) {
-				if (event.buttonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
-					moveToCursor = true
-				}
-				else if (event.buttonReleased(GLFW_MOUSE_BUTTON_LEFT)) {
-					moveToCursor = false
-				}
-			}
-		}
-		inputEvents.clear()
-
-		if (movingLeft) {
+		if (inputEventHandler.keyPressed(GLFW_KEY_LEFT)) {
 			bucketImage.transform.translate((float)(-BUCKET_SPEED * delta), 0, 0)
 		}
-		if (movingRight) {
+		if (inputEventHandler.keyPressed(GLFW_KEY_RIGHT)) {
 			bucketImage.transform.translate((float)(BUCKET_SPEED * delta), 0, 0)
 		}
-		if (moveToCursor) {
-			bucketImage.transform.translate((float)(screenCursorPosition.x - bucketPosition.x - (bucketImage.width / 2)), 0, 0)
+		if (inputEventHandler.mouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+			bucketImage.transform.translate((float)(inputEventHandler.cursorPosition().x - bucketPosition.x - (bucketImage.width / 2)), 0, 0)
 		}
 	}
 
