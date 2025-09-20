@@ -112,6 +112,7 @@ class SimpleGame implements Runnable {
 			device = new OpenALAudioDevice()
 				.withMasterVolume(0.25)
 			music = new Sound('music.mp3', getResourceAsStream('nz/net/ultraq/simplegame/music.mp3'))
+				.withVolume(0.5)
 			dropSound = new Sound('drop.mp3', getResourceAsStream('nz/net/ultraq/simplegame/drop.mp3'))
 
 			background = new Sprite(backgroundImage)
