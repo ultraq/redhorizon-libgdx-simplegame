@@ -54,6 +54,8 @@ class SimpleGame implements Runnable {
 	}
 
 	private static final Logger logger = LoggerFactory.getLogger(SimpleGame)
+
+	// TODO: Make a Camera class to capture all of these variables
 	private static final float worldWidth = 800f
 	private static final float worldHeight = 500f
 	private static final Matrix4f projection = new Matrix4f().setOrthoSymmetric(worldWidth, worldHeight, 0, 1)
