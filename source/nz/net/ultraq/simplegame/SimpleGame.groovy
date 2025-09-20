@@ -21,6 +21,7 @@ import nz.net.ultraq.redhorizon.audio.Sound
 import nz.net.ultraq.redhorizon.audio.openal.OpenALAudioDevice
 import nz.net.ultraq.redhorizon.graphics.Image
 import nz.net.ultraq.redhorizon.graphics.Shader
+import nz.net.ultraq.redhorizon.graphics.Sprite
 import nz.net.ultraq.redhorizon.graphics.Window
 import nz.net.ultraq.redhorizon.graphics.opengl.BasicShader
 import nz.net.ultraq.redhorizon.graphics.opengl.OpenGLWindow
@@ -68,10 +69,14 @@ class SimpleGame implements Runnable {
 	private static final float DROP_SPEED = 200f
 
 	private Window window
+	private Shader shader
 	private Image backgroundImage
 	private Image bucketImage
-	private Shader shader
-	private final List<Image> drops = []
+	private Image dropImage
+	private Sprite background
+	private Sprite bucket
+	private final List<Sprite> drops = []
+
 	private AudioDevice device
 	// TODO: A proper streaming music type: https://github.com/ultraq/redhorizon/issues/56#issuecomment-3289393917
 	private Sound music
@@ -80,6 +85,7 @@ class SimpleGame implements Runnable {
 	private InputEventHandler inputEventHandler
 	private Vector3f bucketPosition = new Vector3f()
 	private Vector3f lastBucketPosition = new Vector3f()
+	private float bucketPositionLoggingTimer
 	private float dropTimer
 	private Vector3f dropPosition = new Vector3f()
 	private Rectanglef bucketHitBox = new Rectanglef()
@@ -101,16 +107,18 @@ class SimpleGame implements Runnable {
 			shader = new BasicShader()
 			backgroundImage = new Image('background.png', getResourceAsStream('nz/net/ultraq/simplegame/background.png'))
 			bucketImage = new Image('bucket.png', getResourceAsStream('nz/net/ultraq/simplegame/bucket.png'))
+			dropImage = new Image('drop.png', getResourceAsStream('nz/net/ultraq/simplegame/drop.png'))
 
 			device = new OpenALAudioDevice()
-				.withMasterVolume(0.4)
+				.withMasterVolume(0.25)
 			music = new Sound('music.mp3', getResourceAsStream('nz/net/ultraq/simplegame/music.mp3'))
 			dropSound = new Sound('drop.mp3', getResourceAsStream('nz/net/ultraq/simplegame/drop.mp3'))
 
+			background = new Sprite(backgroundImage)
+			bucket = new Sprite(bucketImage)
+
 			window.show()
-			music
-				.withVolume(0.5)
-				.play()
+			music.play()
 			var lastUpdateTimeMs = System.currentTimeMillis()
 
 			while (!window.shouldClose()) {
@@ -130,6 +138,9 @@ class SimpleGame implements Runnable {
 			music?.close()
 			device?.close()
 			drops*.close()
+			bucket?.close()
+			background?.close()
+			dropImage?.close()
 			bucketImage?.close()
 			backgroundImage?.close()
 			shader?.close()
@@ -143,13 +154,13 @@ class SimpleGame implements Runnable {
 	private void input(float delta) {
 
 		if (inputEventHandler.keyPressed(GLFW_KEY_LEFT)) {
-			bucketImage.transform.translate((float)(-BUCKET_SPEED * delta), 0, 0)
+			bucket.transform.translate((float)(-BUCKET_SPEED * delta), 0, 0)
 		}
 		if (inputEventHandler.keyPressed(GLFW_KEY_RIGHT)) {
-			bucketImage.transform.translate((float)(BUCKET_SPEED * delta), 0, 0)
+			bucket.transform.translate((float)(BUCKET_SPEED * delta), 0, 0)
 		}
 		if (inputEventHandler.mouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
-			bucketImage.transform.translate((float)(inputEventHandler.cursorPosition().x - bucketPosition.x - (bucketImage.width / 2)), 0, 0)
+			bucket.transform.translate((float)(inputEventHandler.cursorPosition().x - bucketPosition.x - (bucketImage.width / 2)), 0, 0)
 		}
 	}
 
@@ -159,18 +170,22 @@ class SimpleGame implements Runnable {
 	private void logic(float delta) {
 
 		// Clamp the bucket to the screen
-		bucketImage.transform.getTranslation(bucketPosition)
+		bucket.transform.getTranslation(bucketPosition)
 		if (bucketPosition.x < 0) {
-			bucketImage.transform.translation(0, 0, 0)
-			bucketImage.transform.getTranslation(bucketPosition)
+			bucket.transform.translation(0, 0, 0)
+			bucket.transform.getTranslation(bucketPosition)
 		}
-		else if (bucketPosition.x > worldWidth - bucketImage.width) {
-			bucketImage.transform.translation((float)(worldWidth - bucketImage.width), 0, 0)
-			bucketImage.transform.getTranslation(bucketPosition)
+		else if (bucketPosition.x > worldWidth - bucket.width) {
+			bucket.transform.translation((float)(worldWidth - bucket.width), 0, 0)
+			bucket.transform.getTranslation(bucketPosition)
 		}
 
+		bucketPositionLoggingTimer += delta
 		if (bucketPosition != lastBucketPosition) {
-			logger.debug('Bucket position: {}', bucketPosition.x)
+			if (bucketPositionLoggingTimer > 1) {
+				logger.debug('Bucket position: {}', bucketPosition.x)
+				bucketPositionLoggingTimer -= 1
+			}
 			lastBucketPosition.set(bucketPosition)
 		}
 		bucketHitBox.set(bucketPosition.x, bucketPosition.y, (float)(bucketPosition.x + bucketImage.width), (float)(bucketPosition.y + bucketImage.height))
@@ -178,9 +193,7 @@ class SimpleGame implements Runnable {
 		// Create a new drop every 1 second
 		dropTimer += delta
 		if (dropTimer > 1) {
-			// TODO: Some object that can reuse an existing image, instead of having
-			//       to load a new one every time: https://github.com/ultraq/redhorizon/issues/56#issuecomment-3289393917
-			var drop = new Image('drop.png', getResourceAsStream('nz/net/ultraq/simplegame/drop.png'))
+			var drop = new Sprite(dropImage)
 			drop.transform.translation((float)(Math.random() * (worldWidth - drop.width)), 500, 0)
 			drops << drop
 			dropTimer -= 1
@@ -196,7 +209,7 @@ class SimpleGame implements Runnable {
 
 			// Check if this drop has been collected by the bucket
 			if (bucketHitBox.intersectsRectangle(dropHitBox)) {
-				logger.info('Drop collected!')
+				logger.debug('Drop collected!')
 				dropSound.play()
 				iterator.remove()
 				drop.close()
@@ -204,7 +217,7 @@ class SimpleGame implements Runnable {
 
 			// Check if the drop is no longer visible
 			else if (drop.transform.getTranslation(dropPosition).y < -drop.height) {
-				logger.info('Drop no longer visible')
+				logger.debug('Drop no longer visible')
 				iterator.remove()
 				drop.close()
 			}
@@ -220,8 +233,8 @@ class SimpleGame implements Runnable {
 			shader.use()
 			shader.setUniform('projection', projection)
 			shader.setUniform('view', view)
-			backgroundImage.draw(shader)
-			bucketImage.draw(shader)
+			background.draw(shader)
+			bucket.draw(shader)
 			drops*.draw(shader)
 		}
 	}
