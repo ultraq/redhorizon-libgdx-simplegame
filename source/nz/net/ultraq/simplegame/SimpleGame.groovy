@@ -99,7 +99,7 @@ class SimpleGame implements Runnable {
 				}
 			camera = new Camera(800, 500)
 				.attachWindow(window)
-			camera.view.translate(-400, -250, 0)
+				.translate(400, 250, 0)
 			inputEventHandler = new InputEventHandler()
 				.addInputSource(window)
 			shader = new BasicShader()
