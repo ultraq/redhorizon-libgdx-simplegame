@@ -19,6 +19,7 @@ package nz.net.ultraq.simplegame
 import nz.net.ultraq.redhorizon.audio.AudioDevice
 import nz.net.ultraq.redhorizon.audio.Sound
 import nz.net.ultraq.redhorizon.audio.openal.OpenALAudioDevice
+import nz.net.ultraq.redhorizon.graphics.Camera
 import nz.net.ultraq.redhorizon.graphics.Image
 import nz.net.ultraq.redhorizon.graphics.Shader
 import nz.net.ultraq.redhorizon.graphics.Sprite
@@ -29,7 +30,6 @@ import nz.net.ultraq.redhorizon.input.InputEvent
 import nz.net.ultraq.redhorizon.input.InputEventHandler
 import nz.net.ultraq.redhorizon.input.KeyEvent
 
-import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.joml.primitives.Rectanglef
 import org.slf4j.Logger
@@ -56,19 +56,13 @@ class SimpleGame implements Runnable {
 
 	private static final Logger logger = LoggerFactory.getLogger(SimpleGame)
 
-	// TODO: Make a Camera class to capture all of these variables
-	private static final float worldWidth = 800f
-	private static final float worldHeight = 500f
-	private static final Matrix4f projection = new Matrix4f().setOrthoSymmetric(worldWidth, worldHeight, 0, 1)
-	private static final Matrix4f view = new Matrix4f().setLookAt(
-		(float)(worldWidth / 2), (float)(worldHeight / 2), 1,
-		(float)(worldWidth / 2), (float)(worldHeight / 2), 0,
-		0, 1, 0
-	)
+	private static final float WORLD_WIDTH = 800f
+	private static final float WORLD_HEIGHT = 500f
 	private static final float BUCKET_SPEED = 400f
 	private static final float DROP_SPEED = 200f
 
 	private Window window
+	private Camera camera
 	private Shader shader
 	private Image backgroundImage
 	private Image bucketImage
@@ -83,6 +77,7 @@ class SimpleGame implements Runnable {
 	private Sound dropSound
 
 	private InputEventHandler inputEventHandler
+	private Vector3f worldCursorPosition = new Vector3f()
 	private Vector3f bucketPosition = new Vector3f()
 	private Vector3f lastBucketPosition = new Vector3f()
 	private float bucketPositionLoggingTimer
@@ -102,6 +97,9 @@ class SimpleGame implements Runnable {
 						window.shouldClose(true)
 					}
 				}
+			camera = new Camera(800, 500)
+				.attachWindow(window)
+			camera.view.translate(-400, -250, 0)
 			inputEventHandler = new InputEventHandler()
 				.addInputSource(window)
 			shader = new BasicShader()
@@ -161,7 +159,9 @@ class SimpleGame implements Runnable {
 			bucket.transform.translate((float)(BUCKET_SPEED * delta), 0, 0)
 		}
 		if (inputEventHandler.mouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
-			bucket.transform.translate((float)(inputEventHandler.cursorPosition().x - bucketPosition.x - (bucketImage.width / 2)), 0, 0)
+			var cursorPosition = inputEventHandler.cursorPosition()
+			camera.unproject(cursorPosition.x, cursorPosition.y, worldCursorPosition)
+			bucket.transform.translate((float)(worldCursorPosition.x - bucketPosition.x - (bucketImage.width / 2)), 0, 0)
 		}
 	}
 
@@ -176,8 +176,8 @@ class SimpleGame implements Runnable {
 			bucket.transform.translation(0, 0, 0)
 			bucket.transform.getTranslation(bucketPosition)
 		}
-		else if (bucketPosition.x > worldWidth - bucket.width) {
-			bucket.transform.translation((float)(worldWidth - bucket.width), 0, 0)
+		else if (bucketPosition.x > WORLD_WIDTH - bucket.width) {
+			bucket.transform.translation((float)(WORLD_WIDTH - bucket.width), 0, 0)
 			bucket.transform.getTranslation(bucketPosition)
 		}
 
@@ -185,7 +185,7 @@ class SimpleGame implements Runnable {
 		if (bucketPosition != lastBucketPosition) {
 			if (bucketPositionLoggingTimer > 1) {
 				logger.debug('Bucket position: {}', bucketPosition.x)
-				bucketPositionLoggingTimer -= 1
+				bucketPositionLoggingTimer = 0
 			}
 			lastBucketPosition.set(bucketPosition)
 		}
@@ -195,7 +195,7 @@ class SimpleGame implements Runnable {
 		dropTimer += delta
 		if (dropTimer > 1) {
 			var drop = new Sprite(dropImage)
-			drop.transform.translation((float)(Math.random() * (worldWidth - drop.width)), 500, 0)
+			drop.transform.translation((float)(Math.random() * (WORLD_WIDTH - drop.width)), WORLD_HEIGHT, 0)
 			drops << drop
 			dropTimer -= 1
 		}
@@ -232,8 +232,7 @@ class SimpleGame implements Runnable {
 
 		window.withFrame { ->
 			shader.use()
-			shader.setUniform('projection', projection)
-			shader.setUniform('view', view)
+			camera.update(shader)
 			background.draw(shader)
 			bucket.draw(shader)
 			drops*.draw(shader)
