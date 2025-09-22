@@ -17,6 +17,7 @@
 package nz.net.ultraq.simplegame
 
 import nz.net.ultraq.redhorizon.audio.AudioDevice
+import nz.net.ultraq.redhorizon.audio.Music
 import nz.net.ultraq.redhorizon.audio.Sound
 import nz.net.ultraq.redhorizon.audio.openal.OpenALAudioDevice
 import nz.net.ultraq.redhorizon.graphics.Camera
@@ -72,8 +73,7 @@ class SimpleGame implements Runnable {
 	private final List<Sprite> drops = []
 
 	private AudioDevice device
-	// TODO: A proper streaming music type: https://github.com/ultraq/redhorizon/issues/56#issuecomment-3289393917
-	private Sound music
+	private Music music
 	private Sound dropSound
 
 	private InputEventHandler inputEventHandler
@@ -93,8 +93,10 @@ class SimpleGame implements Runnable {
 			window = new OpenGLWindow(800, 500, 'libGDX Simple Game')
 				.withVSync(true)
 				.on(InputEvent) { event ->
-					if (event instanceof KeyEvent && event.keyPressed(GLFW_KEY_ESCAPE)) {
-						window.shouldClose(true)
+					if (event instanceof KeyEvent) {
+						if (event.keyPressed(GLFW_KEY_ESCAPE)) {
+							window.shouldClose(true)
+						}
 					}
 				}
 			camera = new Camera(800, 500)
@@ -109,7 +111,8 @@ class SimpleGame implements Runnable {
 
 			device = new OpenALAudioDevice()
 				.withMasterVolume(0.25)
-			music = new Sound('music.mp3', getResourceAsStream('nz/net/ultraq/simplegame/music.mp3'))
+			music = new Music('music.mp3', getResourceAsStream('nz/net/ultraq/simplegame/music.mp3'))
+				.withLooping(true)
 				.withVolume(0.5)
 			dropSound = new Sound('drop.mp3', getResourceAsStream('nz/net/ultraq/simplegame/drop.mp3'))
 
@@ -237,5 +240,6 @@ class SimpleGame implements Runnable {
 			bucket.draw(shader)
 			drops*.draw(shader)
 		}
+		music.updateStream()
 	}
 }
