@@ -234,12 +234,12 @@ class SimpleGame implements Runnable {
 	private void render() {
 
 		window.withFrame { ->
-			shader.use()
-			camera.update(shader)
-			background.draw(shader)
-			bucket.draw(shader)
-			drops*.draw(shader)
+			var renderContext = shader.use()
+			camera.update(renderContext)
+			background.draw(renderContext)
+			bucket.draw(renderContext)
+			drops*.draw(renderContext)
 		}
-		music.updateStream()
+		music.update()
 	}
 }
