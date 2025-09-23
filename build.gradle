@@ -34,16 +34,13 @@ configure {
 				implementation 'nz.net.ultraq.redhorizon:redhorizon-graphics:0.40.1-SNAPSHOT'
 				implementation 'nz.net.ultraq.redhorizon:redhorizon-input:0.40.1-SNAPSHOT'
 				implementation 'org.apache.groovy:groovy:4.0.28'
-				implementation('org.joml:joml:1.10.8') {
-					exclude group: 'org.jetbrains.kotlin'
-				}
-				implementation('org.joml:joml-primitives:1.10.0') {
-					exclude group: 'org.jetbrains.kotlin'
-				}
+				implementation('org.joml:joml:1.10.8')
+				implementation('org.joml:joml-primitives:1.10.0')
 			}
 }
 
-configurations.all {
+configurations.configureEach {
+	exclude group: 'org.jetbrains.kotlin'
 	resolutionStrategy {
 		cacheChangingModulesFor 0, 'seconds'
 		cacheDynamicVersionsFor 0, 'seconds'
