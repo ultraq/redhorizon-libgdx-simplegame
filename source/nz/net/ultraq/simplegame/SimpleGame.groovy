@@ -32,6 +32,7 @@ import nz.net.ultraq.redhorizon.input.InputEventHandler
 import nz.net.ultraq.redhorizon.input.KeyEvent
 
 import org.joml.Vector3f
+import org.joml.Vector3fc
 import org.joml.primitives.Rectanglef
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -77,14 +78,13 @@ class SimpleGame implements Runnable {
 	private Sound dropSound
 
 	private InputEventHandler inputEventHandler
-	private Vector3f worldCursorPosition = new Vector3f()
-	private Vector3f bucketPosition = new Vector3f()
-	private Vector3f lastBucketPosition = new Vector3f()
+	private final Vector3fc worldCursorPosition = new Vector3f()
+	private final Vector3fc bucketPosition = new Vector3f()
+	private final Vector3fc lastBucketPosition = new Vector3f()
 	private float bucketPositionLoggingTimer
 	private float dropTimer
-	private Vector3f dropPosition = new Vector3f()
-	private Rectanglef bucketHitBox = new Rectanglef()
-	private Rectanglef dropHitBox = new Rectanglef()
+	private final Rectanglef bucketHitBox = new Rectanglef()
+	private final Rectanglef dropHitBox = new Rectanglef()
 
 	@Override
 	void run() {
@@ -102,7 +102,7 @@ class SimpleGame implements Runnable {
 				}
 			camera = new Camera(800, 500)
 				.attachWindow(window)
-			camera.view.translate(-400, -250, 0)
+			camera.translate(400, 250, 0)
 			inputEventHandler = new InputEventHandler()
 				.addInputSource(window)
 			shader = new BasicShader()
@@ -157,15 +157,15 @@ class SimpleGame implements Runnable {
 	private void input(float delta) {
 
 		if (inputEventHandler.keyPressed(GLFW_KEY_LEFT)) {
-			bucket.transform.translate((float)(-BUCKET_SPEED * delta), 0, 0)
+			bucket.translate((float)(-BUCKET_SPEED * delta), 0, 0)
 		}
 		if (inputEventHandler.keyPressed(GLFW_KEY_RIGHT)) {
-			bucket.transform.translate((float)(BUCKET_SPEED * delta), 0, 0)
+			bucket.translate((float)(BUCKET_SPEED * delta), 0, 0)
 		}
 		if (inputEventHandler.mouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
 			var cursorPosition = inputEventHandler.cursorPosition()
 			camera.unproject(cursorPosition.x, cursorPosition.y, worldCursorPosition)
-			bucket.transform.translate((float)(worldCursorPosition.x - bucketPosition.x - (bucketImage.width / 2)), 0, 0)
+			bucket.translate((float)(worldCursorPosition.x - bucketPosition.x() - (bucketImage.width / 2)), 0, 0)
 		}
 	}
 
@@ -175,31 +175,31 @@ class SimpleGame implements Runnable {
 	private void logic(float delta) {
 
 		// Clamp the bucket to the screen
-		bucket.transform.getTranslation(bucketPosition)
-		if (bucketPosition.x < 0) {
-			bucket.transform.translation(0, 0, 0)
-			bucket.transform.getTranslation(bucketPosition)
+		bucketPosition.set(bucket.position)
+		if (bucketPosition.x() < 0) {
+			bucket.setPosition(0, 0, 0)
+			bucketPosition.set(bucket.position)
 		}
-		else if (bucketPosition.x > WORLD_WIDTH - bucket.width) {
-			bucket.transform.translation((float)(WORLD_WIDTH - bucket.width), 0, 0)
-			bucket.transform.getTranslation(bucketPosition)
+		else if (bucketPosition.x() > WORLD_WIDTH - bucket.width) {
+			bucket.setPosition((float)(WORLD_WIDTH - bucket.width), 0, 0)
+			bucketPosition.set(bucket.position)
 		}
 
 		bucketPositionLoggingTimer += delta
 		if (bucketPosition != lastBucketPosition) {
 			if (bucketPositionLoggingTimer > 1) {
-				logger.debug('Bucket position: {}', bucketPosition.x)
+				logger.debug('Bucket position: {}', bucketPosition.x())
 				bucketPositionLoggingTimer = 0
 			}
 			lastBucketPosition.set(bucketPosition)
 		}
-		bucketHitBox.set(bucketPosition.x, bucketPosition.y, (float)(bucketPosition.x + bucketImage.width), (float)(bucketPosition.y + bucketImage.height))
+		bucketHitBox.set(bucketPosition.x(), bucketPosition.y(), (float)(bucketPosition.x() + bucketImage.width), (float)(bucketPosition.y() + bucketImage.height))
 
 		// Create a new drop every 1 second
 		dropTimer += delta
 		if (dropTimer > 1) {
 			var drop = new Sprite(dropImage)
-			drop.transform.translation((float)(Math.random() * (WORLD_WIDTH - drop.width)), WORLD_HEIGHT, 0)
+			drop.setPosition((float)(Math.random() * (WORLD_WIDTH - drop.width)), WORLD_HEIGHT, 0)
 			drops << drop
 			dropTimer -= 1
 		}
@@ -208,9 +208,9 @@ class SimpleGame implements Runnable {
 			var drop = iterator.next()
 
 			// Move drops down the screen
-			drop.transform.translate(0, (float)(-DROP_SPEED * delta), 0)
-			drop.transform.getTranslation(dropPosition)
-			dropHitBox.set(dropPosition.x, dropPosition.y, (float)(dropPosition.x + drop.width), (float)(dropPosition.y + drop.height))
+			drop.translate(0, (float)(-DROP_SPEED * delta), 0)
+			var dropPosition = drop.position
+			dropHitBox.set(dropPosition.x(), dropPosition.y(), (float)(dropPosition.x() + drop.width), (float)(dropPosition.y() + drop.height))
 
 			// Check if this drop has been collected by the bucket
 			if (bucketHitBox.intersectsRectangle(dropHitBox)) {
@@ -221,7 +221,7 @@ class SimpleGame implements Runnable {
 			}
 
 			// Check if the drop is no longer visible
-			else if (drop.transform.getTranslation(dropPosition).y < -drop.height) {
+			else if (drop.position.y() < -drop.height) {
 				logger.debug('Drop no longer visible')
 				iterator.remove()
 				drop.close()
