@@ -91,6 +91,7 @@ class SimpleGame implements Runnable {
 
 		try {
 			window = new OpenGLWindow(800, 500, 'libGDX Simple Game')
+//				.withFpsCounter()
 				.withVSync(true)
 				.on(InputEvent) { event ->
 					if (event instanceof KeyEvent) {
