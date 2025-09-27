@@ -91,6 +91,7 @@ class SimpleGame implements Runnable {
 
 		try {
 			window = new OpenGLWindow(800, 500, 'libGDX Simple Game')
+				.centerToScreen()
 //				.withFpsCounter()
 				.withVSync(true)
 				.on(InputEvent) { event ->
@@ -100,9 +101,8 @@ class SimpleGame implements Runnable {
 						}
 					}
 				}
-			camera = new Camera(800, 500)
-				.attachWindow(window)
-			camera.translate(400, 250, 0)
+			camera = new Camera(800, 500, window)
+				.translate(400, 250, 0)
 			inputEventHandler = new InputEventHandler()
 				.addInputSource(window)
 			shader = new BasicShader()
