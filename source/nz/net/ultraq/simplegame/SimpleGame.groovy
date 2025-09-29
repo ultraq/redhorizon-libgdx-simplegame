@@ -30,9 +30,9 @@ import nz.net.ultraq.redhorizon.graphics.opengl.OpenGLWindow
 import nz.net.ultraq.redhorizon.input.InputEvent
 import nz.net.ultraq.redhorizon.input.InputEventHandler
 import nz.net.ultraq.redhorizon.input.KeyEvent
+import nz.net.ultraq.redhorizon.scenegraph.Scene
 
 import org.joml.Vector3f
-import org.joml.Vector3fc
 import org.joml.primitives.Rectanglef
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -72,15 +72,17 @@ class SimpleGame implements Runnable {
 	private Sprite background
 	private Sprite bucket
 	private final List<Sprite> drops = []
+	private int dropCount = 1
 
 	private AudioDevice device
 	private Music music
 	private Sound dropSound
 
+	private Scene scene
 	private InputEventHandler inputEventHandler
-	private final Vector3fc worldCursorPosition = new Vector3f()
-	private final Vector3fc bucketPosition = new Vector3f()
-	private final Vector3fc lastBucketPosition = new Vector3f()
+	private final Vector3f worldCursorPosition = new Vector3f()
+	private final Vector3f bucketPosition = new Vector3f()
+	private final Vector3f lastBucketPosition = new Vector3f()
 	private float bucketPositionLoggingTimer
 	private float dropTimer
 	private final Rectanglef bucketHitBox = new Rectanglef()
@@ -90,9 +92,11 @@ class SimpleGame implements Runnable {
 	void run() {
 
 		try {
+			scene = new Scene()
 			window = new OpenGLWindow(800, 500, 'libGDX Simple Game')
+				.addFpsCounter()
+				.addNodeList(scene)
 				.centerToScreen()
-//				.withFpsCounter()
 				.withVSync(true)
 				.on(InputEvent) { event ->
 					if (event instanceof KeyEvent) {
@@ -103,6 +107,7 @@ class SimpleGame implements Runnable {
 				}
 			camera = new Camera(800, 500, window)
 				.translate(400, 250, 0)
+			scene << camera
 			inputEventHandler = new InputEventHandler()
 				.addInputSource(window)
 			shader = new BasicShader()
@@ -115,10 +120,18 @@ class SimpleGame implements Runnable {
 			music = new Music('music.mp3', getResourceAsStream('nz/net/ultraq/simplegame/music.mp3'))
 				.withLooping(true)
 				.withVolume(0.5)
+			scene << music
 			dropSound = new Sound('drop.mp3', getResourceAsStream('nz/net/ultraq/simplegame/drop.mp3'))
+			scene << dropSound
 
-			background = new Sprite(backgroundImage)
-			bucket = new Sprite(bucketImage)
+			background = new Sprite(backgroundImage).tap {
+				name = 'Background'
+			}
+			scene << background
+			bucket = new Sprite(bucketImage).tap {
+				name = 'Bucket'
+			}
+			scene << bucket
 
 			window.show()
 			music.play()
@@ -198,9 +211,12 @@ class SimpleGame implements Runnable {
 		// Create a new drop every 1 second
 		dropTimer += delta
 		if (dropTimer > 1) {
-			var drop = new Sprite(dropImage)
-			drop.setPosition((float)(Math.random() * (WORLD_WIDTH - drop.width)), WORLD_HEIGHT, 0)
+			var drop = new Sprite(dropImage).tap {
+				name = "Drop ${dropCount++}"
+				setPosition((float)(Math.random() * (WORLD_WIDTH - dropImage.width)), WORLD_HEIGHT, 0)
+			}
 			drops << drop
+			scene << drop
 			dropTimer -= 1
 		}
 
@@ -217,6 +233,7 @@ class SimpleGame implements Runnable {
 				logger.debug('Drop collected!')
 				dropSound.play()
 				iterator.remove()
+				scene.removeChild(drop)
 				drop.close()
 			}
 
@@ -224,6 +241,7 @@ class SimpleGame implements Runnable {
 			else if (drop.position.y() < -drop.height) {
 				logger.debug('Drop no longer visible')
 				iterator.remove()
+				scene.removeChild(drop)
 				drop.close()
 			}
 		}
