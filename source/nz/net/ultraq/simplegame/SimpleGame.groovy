@@ -22,7 +22,6 @@ import nz.net.ultraq.redhorizon.audio.Sound
 import nz.net.ultraq.redhorizon.audio.openal.OpenALAudioDevice
 import nz.net.ultraq.redhorizon.graphics.Camera
 import nz.net.ultraq.redhorizon.graphics.Image
-import nz.net.ultraq.redhorizon.graphics.Shader
 import nz.net.ultraq.redhorizon.graphics.Sprite
 import nz.net.ultraq.redhorizon.graphics.Window
 import nz.net.ultraq.redhorizon.graphics.opengl.BasicShader
@@ -33,7 +32,6 @@ import nz.net.ultraq.redhorizon.input.KeyEvent
 import nz.net.ultraq.redhorizon.scenegraph.Scene
 
 import org.joml.Vector3f
-import org.joml.primitives.Rectanglef
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
@@ -65,7 +63,7 @@ class SimpleGame implements Runnable {
 
 	private Window window
 	private Camera camera
-	private Shader shader
+	private BasicShader shader
 	private Image backgroundImage
 	private Image bucketImage
 	private Image dropImage
@@ -85,8 +83,6 @@ class SimpleGame implements Runnable {
 	private final Vector3f lastBucketPosition = new Vector3f()
 	private float bucketPositionLoggingTimer
 	private float dropTimer
-	private final Rectanglef bucketHitBox = new Rectanglef()
-	private final Rectanglef dropHitBox = new Rectanglef()
 
 	@Override
 	void run() {
@@ -206,7 +202,6 @@ class SimpleGame implements Runnable {
 			}
 			lastBucketPosition.set(bucketPosition)
 		}
-		bucketHitBox.set(bucketPosition.x(), bucketPosition.y(), (float)(bucketPosition.x() + bucketImage.width), (float)(bucketPosition.y() + bucketImage.height))
 
 		// Create a new drop every 1 second
 		dropTimer += delta
@@ -225,11 +220,9 @@ class SimpleGame implements Runnable {
 
 			// Move drops down the screen
 			drop.translate(0, (float)(-DROP_SPEED * delta), 0)
-			var dropPosition = drop.position
-			dropHitBox.set(dropPosition.x(), dropPosition.y(), (float)(dropPosition.x() + drop.width), (float)(dropPosition.y() + drop.height))
 
 			// Check if this drop has been collected by the bucket
-			if (bucketHitBox.intersectsRectangle(dropHitBox)) {
+			if (bucket.boundingArea.intersectsRectangle(drop.boundingArea)) {
 				logger.debug('Drop collected!')
 				dropSound.play()
 				iterator.remove()
@@ -252,12 +245,13 @@ class SimpleGame implements Runnable {
 	 */
 	private void render() {
 
-		window.withFrame { ->
-			var renderContext = shader.use()
-			camera.update(renderContext)
-			background.draw(renderContext)
-			bucket.draw(renderContext)
-			drops*.draw(renderContext)
+		window.useWindow { ->
+			shader.useShader { shaderContext ->
+				camera.update(shaderContext)
+				background.draw(shaderContext)
+				bucket.draw(shaderContext)
+				drops*.draw(shaderContext)
+			}
 		}
 		music.update()
 	}
