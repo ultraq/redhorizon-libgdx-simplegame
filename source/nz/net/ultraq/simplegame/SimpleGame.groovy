@@ -87,6 +87,8 @@ class SimpleGame implements Runnable {
 	@Override
 	void run() {
 
+		BufferedInputStream musicStream = null
+
 		try {
 			scene = new Scene()
 			window = new OpenGLWindow(800, 500, 'libGDX Simple Game')
@@ -107,17 +109,26 @@ class SimpleGame implements Runnable {
 			inputEventHandler = new InputEventHandler()
 				.addInputSource(window)
 			shader = new BasicShader()
-			backgroundImage = new Image('background.png', getResourceAsStream('nz/net/ultraq/simplegame/background.png'))
-			bucketImage = new Image('bucket.png', getResourceAsStream('nz/net/ultraq/simplegame/bucket.png'))
-			dropImage = new Image('drop.png', getResourceAsStream('nz/net/ultraq/simplegame/drop.png'))
+			backgroundImage = getResourceAsStream('nz/net/ultraq/simplegame/background.png').withBufferedStream { stream ->
+				return new Image('background.png', stream)
+			}
+			bucketImage = getResourceAsStream('nz/net/ultraq/simplegame/bucket.png').withBufferedStream { stream ->
+				return new Image('bucket.png', stream)
+			}
+			dropImage = getResourceAsStream('nz/net/ultraq/simplegame/drop.png').withBufferedStream { stream ->
+				return new Image('drop.png', stream)
+			}
 
 			device = new OpenALAudioDevice()
 				.withMasterVolume(0.25)
-			music = new Music('music.mp3', getResourceAsStream('nz/net/ultraq/simplegame/music.mp3'))
+			musicStream = new BufferedInputStream(getResourceAsStream('nz/net/ultraq/simplegame/music.mp3'))
+			music = new Music('music.mp3', musicStream)
 				.withLooping(true)
 				.withVolume(0.5)
 			scene << music
-			dropSound = new Sound('drop.mp3', getResourceAsStream('nz/net/ultraq/simplegame/drop.mp3'))
+			dropSound = getResourceAsStream('nz/net/ultraq/simplegame/drop.mp3').withBufferedStream { stream ->
+				return new Sound('drop.mp3', stream)
+			}
 			scene << dropSound
 
 			background = new Sprite(backgroundImage).tap {
@@ -148,6 +159,7 @@ class SimpleGame implements Runnable {
 		finally {
 			dropSound?.close()
 			music?.close()
+			musicStream?.close()
 			device?.close()
 			drops*.close()
 			bucket?.close()
