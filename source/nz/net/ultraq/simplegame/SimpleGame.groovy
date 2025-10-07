@@ -26,9 +26,7 @@ import nz.net.ultraq.redhorizon.graphics.Sprite
 import nz.net.ultraq.redhorizon.graphics.Window
 import nz.net.ultraq.redhorizon.graphics.opengl.BasicShader
 import nz.net.ultraq.redhorizon.graphics.opengl.OpenGLWindow
-import nz.net.ultraq.redhorizon.input.InputEvent
 import nz.net.ultraq.redhorizon.input.InputEventHandler
-import nz.net.ultraq.redhorizon.input.KeyEvent
 import nz.net.ultraq.redhorizon.scenegraph.Scene
 
 import org.joml.Vector3f
@@ -96,13 +94,6 @@ class SimpleGame implements Runnable {
 				.addNodeList(scene)
 				.centerToScreen()
 				.withVSync(true)
-				.on(InputEvent) { event ->
-					if (event instanceof KeyEvent) {
-						if (event.keyPressed(GLFW_KEY_ESCAPE)) {
-							window.shouldClose(true)
-						}
-					}
-				}
 			camera = new Camera(800, 500, window)
 				.translate(400, 250, 0)
 			scene << camera
@@ -176,6 +167,13 @@ class SimpleGame implements Runnable {
 	 * Process input events.
 	 */
 	private void input(float delta) {
+
+		if (inputEventHandler.keyPressed(GLFW_KEY_ESCAPE, true)) {
+			window.shouldClose(true)
+		}
+		if (inputEventHandler.keyPressed(GLFW_KEY_V, true)) {
+			window.toggleVSync()
+		}
 
 		if (inputEventHandler.keyPressed(GLFW_KEY_LEFT)) {
 			bucket.translate((float)(-BUCKET_SPEED * delta), 0, 0)
