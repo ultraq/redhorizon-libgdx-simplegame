@@ -94,8 +94,8 @@ class SimpleGame implements Runnable {
 				.addNodeList(scene)
 				.centerToScreen()
 				.withVSync(true)
-			camera = new Camera(800, 500, window)
-				.translate(400, 250, 0)
+			camera = new Camera(window.width, window.height, window)
+				.translate(window.width / 2, window.height / 2, 0)
 			scene << camera
 			inputEventHandler = new InputEventHandler()
 				.addInputSource(window)
