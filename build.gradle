@@ -19,8 +19,13 @@ plugins {
 	id 'nz.net.ultraq.gradle.fluent-configuration' version '0.7.0'
 }
 
+description = 'Using Red Horizon to build out the libGDX simple game example'
+version = '0.1.4-SNAPSHOT'
+
 configure {
-	createGroovyProject()
+	createGroovyApplicationProject() {
+		mainClass = 'nz.net.ultraq.simplegame.SimpleGame'
+	}
 		.useJavaVersion(21)
 		.useMavenCentralRepositories()
 		.configureSource()
