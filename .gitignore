@@ -1,6 +1,4 @@
 /.gradle
 /.idea
 /build
-*.mp3
-*.png
 imgui.ini
