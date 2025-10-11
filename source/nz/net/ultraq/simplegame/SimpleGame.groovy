@@ -54,8 +54,8 @@ class SimpleGame implements Runnable {
 
 	private static final Logger logger = LoggerFactory.getLogger(SimpleGame)
 
-	private static final float WORLD_WIDTH = 800f
-	private static final float WORLD_HEIGHT = 500f
+	private static final int WORLD_WIDTH = 800
+	private static final int WORLD_HEIGHT = 500
 	private static final float BUCKET_SPEED = 400f
 	private static final float DROP_SPEED = 200f
 
@@ -93,9 +93,10 @@ class SimpleGame implements Runnable {
 				.addFpsCounter()
 				.addNodeList(scene)
 				.centerToScreen()
+				.scaleToFit()
 				.withVSync(true)
-			camera = new Camera(window.width, window.height, window)
-				.translate(window.width / 2, window.height / 2, 0)
+			camera = new Camera(WORLD_WIDTH, WORLD_HEIGHT, window)
+				.translate(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, 0)
 			scene << camera
 			inputEventHandler = new InputEventHandler()
 				.addInputSource(window)
@@ -225,7 +226,7 @@ class SimpleGame implements Runnable {
 			dropTimer -= 1
 		}
 
-		for (var iterator = drops.listIterator(); iterator.hasNext(); ) {
+		for (var iterator = drops.listIterator(); iterator.hasNext();) {
 			var drop = iterator.next()
 
 			// Move drops down the screen
