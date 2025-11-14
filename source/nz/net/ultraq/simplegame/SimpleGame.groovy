@@ -24,6 +24,8 @@ import nz.net.ultraq.redhorizon.graphics.Camera
 import nz.net.ultraq.redhorizon.graphics.Image
 import nz.net.ultraq.redhorizon.graphics.Sprite
 import nz.net.ultraq.redhorizon.graphics.Window
+import nz.net.ultraq.redhorizon.graphics.imgui.DebugOverlay
+import nz.net.ultraq.redhorizon.graphics.imgui.NodeList
 import nz.net.ultraq.redhorizon.graphics.opengl.BasicShader
 import nz.net.ultraq.redhorizon.graphics.opengl.OpenGLWindow
 import nz.net.ultraq.redhorizon.input.InputEventHandler
@@ -78,8 +80,6 @@ class SimpleGame implements Runnable {
 	private InputEventHandler inputEventHandler
 	private final Vector3f worldCursorPosition = new Vector3f()
 	private final Vector3f bucketPosition = new Vector3f()
-	private final Vector3f lastBucketPosition = new Vector3f()
-	private float bucketPositionLoggingTimer
 	private float dropTimer
 
 	@Override
@@ -90,8 +90,6 @@ class SimpleGame implements Runnable {
 		try {
 			scene = new Scene()
 			window = new OpenGLWindow(800, 500, 'libGDX Simple Game')
-				.addFpsCounter()
-				.addNodeList(scene)
 				.centerToScreen()
 				.scaleToFit()
 				.withVSync(true)
@@ -132,7 +130,10 @@ class SimpleGame implements Runnable {
 			}
 			scene << bucket
 
-			window.show()
+			window
+				.addDebugOverlay(new DebugOverlay().withCursorTracking(camera))
+				.addNodeList(new NodeList(scene))
+				.show()
 			music.play()
 			var lastUpdateTimeMs = System.currentTimeMillis()
 
@@ -203,15 +204,6 @@ class SimpleGame implements Runnable {
 		else if (bucketPosition.x() > WORLD_WIDTH - bucket.width) {
 			bucket.setPosition((float)(WORLD_WIDTH - bucket.width), 0, 0)
 			bucketPosition.set(bucket.position)
-		}
-
-		bucketPositionLoggingTimer += delta
-		if (bucketPosition != lastBucketPosition) {
-			if (bucketPositionLoggingTimer > 1) {
-				logger.debug('Bucket position: {}', bucketPosition.x())
-				bucketPositionLoggingTimer = 0
-			}
-			lastBucketPosition.set(bucketPosition)
 		}
 
 		// Create a new drop every 1 second
