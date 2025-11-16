@@ -20,7 +20,7 @@ plugins {
 }
 
 description = 'Using Red Horizon to build out the libGDX simple game example'
-version = '0.1.4-SNAPSHOT'
+version = '0.1.4'
 
 configure {
 	createGroovyApplicationProject() {
@@ -31,15 +31,15 @@ configure {
 		.configureSource()
 			.withSourceDirectory('source')
 			.withDependencies() {
-				implementation 'ch.qos.logback:logback-classic:1.5.19'
+				implementation 'ch.qos.logback:logback-classic:1.5.21'
 				implementation 'info.picocli:picocli:4.7.7'
-				implementation 'nz.net.ultraq.groovy:groovy-extensions:3.1.0'
-				implementation 'nz.net.ultraq.groovy:joml-extensions:0.1.5'
-				implementation 'nz.net.ultraq.redhorizon:redhorizon-audio:0.40.4-SNAPSHOT'
-				implementation 'nz.net.ultraq.redhorizon:redhorizon-graphics:0.40.4-SNAPSHOT'
-				implementation 'nz.net.ultraq.redhorizon:redhorizon-input:0.40.4-SNAPSHOT'
-				implementation 'nz.net.ultraq.redhorizon:redhorizon-scenegraph:0.40.4-SNAPSHOT'
-				implementation 'org.apache.groovy:groovy:4.0.28'
+				implementation 'nz.net.ultraq.groovy:groovy-extensions:3.2.0'
+				implementation 'nz.net.ultraq.groovy:joml-extensions:0.1.6'
+				implementation 'nz.net.ultraq.redhorizon:redhorizon-audio:0.40.4'
+				implementation 'nz.net.ultraq.redhorizon:redhorizon-graphics:0.40.4'
+				implementation 'nz.net.ultraq.redhorizon:redhorizon-input:0.40.4'
+				implementation 'nz.net.ultraq.redhorizon:redhorizon-scenegraph:0.40.4'
+				implementation 'org.apache.groovy:groovy:4.0.29'
 				implementation 'org.joml:joml:1.10.8'
 				implementation 'org.joml:joml-primitives:1.10.0'
 			}
